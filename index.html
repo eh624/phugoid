@@ -92,14 +92,14 @@ const P={v:5,a:16.5,h:1.8,l:0.2,d:0.025,t:0.001};
 const fmt={v:x=>x.toFixed(1),a:x=>x.toFixed(1)+'°',h:x=>x.toFixed(1),l:x=>x.toFixed(3),d:x=>x.toFixed(4),t:x=>x.toFixed(4)};
 let path=[],res=null,anim=null,prog=1;
 const T={
-ko:{title:'푸고이드 시뮬레이터',glider:'(글라이더)',play:'▶ 날려보기',range:'비거리',time:'비행 시간',hmax:'최고 고도',lv:'초기 속도 v₀ (m/s)',la:'발사각 θ₀ (°)',lh:'발사 높이 h₀ (m)',ll:'l/m 양력 계수 (m⁻¹)',ld:'d/m 항력 계수 (m⁻¹)',lt:'시간 간격 Δt (s)',scan:'이 조건에서 최적 발사각 찾기',reset:'초기화',eq:'식:',legv:'속도 v (m/s)',lega:'활공각 θ (°)',gnote:'현재 속도·높이·계수 기준으로 −60°~60°를 0.25° 간격으로 계산한 그래프예요(위: 비거리, 아래: 체공시간). 그래프를 누르면 그 각도로 날려봐요. (속도, 높이, l/m, d/m를 바꾸면 다시 계산돼요)',alt:'고도 (m)',noland:'착지 못함',gr:'발사각별 비거리 (m)',gt:'발사각별 체공시간 (s)',spd:'속도',mr:'최대 비거리',mt:'최대 체공시간',at:'발사각',nomax:'착지하는 각도가 없어요',nl:'착지하기 전에 계산이 끝났어요(속도가 거의 0이 되었거나 계속 날고 있어요). 조건을 바꿔보세요.',err:'오류: ',finding:'찾는 중…',best:(a,b)=>'최적 발사각 ≈ '+a+'° (비거리 '+b+' m). 슬라이더는 0.1° 단위라 가장 가까운 값으로 맞췄어요.',btn:'English'},
-en:{title:'Phugoid Simulator',glider:'(glider)',play:'▶ Fly',range:'Range',time:'Flight time',hmax:'Max altitude',lv:'Initial speed v₀ (m/s)',la:'Launch angle θ₀ (°)',lh:'Launch height h₀ (m)',ll:'l/m lift coefficient (m⁻¹)',ld:'d/m drag coefficient (m⁻¹)',lt:'Time step Δt (s)',scan:'Find optimal launch angle',reset:'Reset',eq:'Equations:',legv:'Speed v (m/s)',lega:'Flight path angle θ (°)',gnote:'Computed for −60° to 60° in 0.25° steps using the current speed, height and coefficients (top: range, bottom: flight time). Click a graph to fly at that angle. (Changing speed, height, l/m or d/m recalculates.)',alt:'Altitude (m)',noland:'Did not land',gr:'Range by launch angle (m)',gt:'Flight time by launch angle (s)',spd:'Speed',mr:'Max range',mt:'Max flight time',at:'launch angle',nomax:'No landing angle found',nl:'The calculation ended before landing (speed dropped near zero or it is still flying). Try changing the conditions.',err:'Error: ',finding:'Searching…',best:(a,b)=>'Optimal launch angle ≈ '+a+'° (range '+b+' m). The slider steps by 0.1°, so it was set to the nearest value.',btn:'한국어'}
+ko:{title:'푸고이드 시뮬레이터',glider:'(글라이더)',play:'▶ 날려보기',range:'비거리',time:'비행 시간',hmax:'최고 고도',lv:'초기 속도 v₀ (m/s)',la:'발사각 θ₀ (°)',lh:'발사 높이 h₀ (m)',ll:'l/m 양력 계수 (m⁻¹)',ld:'d/m 항력 계수 (m⁻¹)',lt:'시간 간격 Δt (s)',scan:'이 조건에서 최적 발사각 찾기',reset:'초기화',eq:'식:',legv:'속도 v (m/s)',lega:'활공각 θ (°)',gnote:'현재 속도·높이·계수 기준으로 −60°~60°를 0.25° 간격으로 계산한 그래프예요(위: 비거리, 아래: 체공시간). 그래프를 누르면 그 각도로 날려봐요. (속도, 높이, l/m, d/m를 바꾸면 다시 계산돼요)',alt:'고도 (m)',noland:'계산 불가',gr:'발사각별 비거리 (m)',gt:'발사각별 체공시간 (s)',spd:'속도',mr:'최대 비거리',mt:'최대 체공시간',at:'발사각',nomax:'착지하는 각도가 없어요',nl:'착지하기 전에 계산이 끝났어요(속도가 거의 0이 되었거나 계속 날고 있어요). 조건을 바꿔보세요.',err:'오류: ',finding:'찾는 중…',best:(a,b)=>'최적 발사각 ≈ '+a+'° (비거리 '+b+' m). 슬라이더는 0.1° 단위라 가장 가까운 값으로 맞췄어요.',btn:'English'},
+en:{title:'Phugoid Simulator',glider:'(glider)',play:'▶ Fly',range:'Range',time:'Flight time',hmax:'Max altitude',lv:'Initial speed v₀ (m/s)',la:'Launch angle θ₀ (°)',lh:'Launch height h₀ (m)',ll:'l/m lift coefficient (m⁻¹)',ld:'d/m drag coefficient (m⁻¹)',lt:'Time step Δt (s)',scan:'Find optimal launch angle',reset:'Reset',eq:'Equations:',legv:'Speed v (m/s)',lega:'Flight path angle θ (°)',gnote:'Computed for −60° to 60° in 0.25° steps using the current speed, height and coefficients (top: range, bottom: flight time). Click a graph to fly at that angle. (Changing speed, height, l/m or d/m recalculates.)',alt:'Altitude (m)',noland:'Cannot calculate',gr:'Range by launch angle (m)',gt:'Flight time by launch angle (s)',spd:'Speed',mr:'Max range',mt:'Max flight time',at:'launch angle',nomax:'No landing angle found',nl:'The calculation ended before landing (speed dropped near zero or it is still flying). Try changing the conditions.',err:'Error: ',finding:'Searching…',best:(a,b)=>'Optimal launch angle ≈ '+a+'° (range '+b+' m). The slider steps by 0.1°, so it was set to the nearest value.',btn:'한국어'}
 };
 let L='ko';try{if(localStorage.getItem('lang')==='en')L='en'}catch(e){}
 let mk=null,ma=[];
 function setMsg(k,...a){mk=k;ma=a;renderMsg()}
 function renderMsg(){const v=mk?T[L][mk]:'';$('msg').textContent=typeof v==='function'?v(...ma):v+(ma[0]&&mk==='err'?ma[0]:'')}
-function renderRes(){if(!res)return;$('rng').textContent=res.ok?res.range.toFixed(3)+' m':T[L].noland;$('tm').textContent=res.time.toFixed(2)+' s';$('hmax').textContent=res.hmax.toFixed(2)+' m'}
+function renderRes(){if(!res)return;$('rng').textContent=res.ok?res.range.toFixed(3)+' m':T[L].noland;$('tm').textContent=res.time.toFixed(2)+' s';$('hmax').textContent=res.hmax.toFixed(2)+' m';$('tm').parentElement.style.display=$('hmax').parentElement.style.display=res.ok?'':'none'}
 function applyLang(){
   document.documentElement.lang=L;document.title=T[L].title;
   document.querySelectorAll('[data-i]').forEach(e=>{e.textContent=T[L][e.dataset.i]});
@@ -108,7 +108,7 @@ function applyLang(){
 }
  
  
-const TMAX=40;
+const TMAX=120;
 function sim(v0,deg,h0,l,d,dt,keep,tmax){
   let v=v0,th=deg*Math.PI/180,h=h0,x=0,t=0,hm=h0,pts=keep?[[0,h0,t,v,th]]:null;
   const N=Math.ceil((tmax||TMAX)/dt),every=Math.max(1,Math.round(0.01/dt));
@@ -123,7 +123,7 @@ function sim(v0,deg,h0,l,d,dt,keep,tmax){
       return{range:X,time:t-dt+dt*f,hmax:hm,pts,ok:true}}
     v=vn;th=tn;h=hn;x=xn;if(h>hm)hm=h;
     if(keep&&i%every===0)pts.push([x,h,t,v,th]);
-    if(!(v>0.05)||!isFinite(th)||x>200)return{range:x,time:t,hmax:hm,pts,ok:false}
+    if(!(v>0.05)||!isFinite(th)||x>1000)return{range:x,time:t,hmax:hm,pts,ok:false}
   }
   return{range:x,time:t,hmax:hm,pts,ok:false}
 }
@@ -193,7 +193,7 @@ function calcRange(){
   const k=[P.v,P.h,P.l,P.d].join();
   if(k===rk)return;rk=k;rd=[];
   for(let a=-60;a<=60.0001;a+=0.25){
-    const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,15);
+    const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,25);
     rd.push([a,r.ok?r.range:null,r.ok?r.time:null]);
   }
 }
@@ -240,10 +240,10 @@ $('scan').onclick=()=>{
   setMsg('finding');
   setTimeout(()=>{
     let best=-1e9,ba=0;
-    for(let a=-60;a<=60;a+=0.1){const r=sim(P.v,a,P.h,P.l,P.d,Math.max(P.t,0.005),false,15);
+    for(let a=-60;a<=60;a+=0.1){const r=sim(P.v,a,P.h,P.l,P.d,Math.max(P.t,0.005),false,25);
       if(r.ok&&r.range>best){best=r.range;ba=a}}
     let b2=-1e9,a2=ba;
-    for(let a=ba-0.1;a<=ba+0.1001;a+=0.01){const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,15);if(r.ok&&r.range>b2){b2=r.range;a2=a}}
+    for(let a=ba-0.1;a<=ba+0.1001;a+=0.01){const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,25);if(r.ok&&r.range>b2){b2=r.range;a2=a}}
     a2=Math.round(a2*100)/100;
     setAll({a:Math.round(a2*10)/10});
     setMsg('best',a2.toFixed(2),b2.toFixed(3));
