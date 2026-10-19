@@ -16,7 +16,7 @@ main{max-width:860px;margin:0 auto;padding:16px}
 h1{font-size:20px;margin:0 0 2px}
 .sub{color:var(--mu);font-size:13px;margin:0 0 14px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
-canvas{width:100%;display:block;border-radius:8px}
+canvas{width:100%;display:block;border-radius:8px}#cv{height:300px}#cv2{height:180px}#cv3{height:240px}#cv3{cursor:crosshair}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px}
 label{display:block;font-size:13px;color:var(--mu)}
 label b{color:var(--tx);float:right;font-variant-numeric:tabular-nums}
@@ -36,7 +36,7 @@ button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
 <main>
 <h1>푸고이드 시뮬레이터</h1>
 <p class="sub">종이비행기 · 오일러 방법(엑셀 수행평가와 동일한 식) · 지면 충돌 직전·직후 선형 보간</p>
-
+ 
 <div class="card">
 <canvas id="cv" height="300"></canvas>
 <div class="row">
@@ -46,7 +46,7 @@ button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
 <button id="s7">7 m/s · −20.4°</button>
 </div>
 </div>
-
+ 
 <div class="card">
 <div class="res">
 <div>비거리<strong id="rng">–</strong></div>
@@ -55,7 +55,7 @@ button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
 </div>
 <div class="note" id="msg"></div>
 </div>
-
+ 
 <div class="card">
 <div class="grid">
 <label>초기 속도 v₀ (m/s)<b id="vV"></b><input id="v" type="range" min="2" max="12" step="0.1" value="5"></label>
@@ -71,22 +71,28 @@ button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
 </div>
 <div class="note">식: v′ = −(d/m)v² − g sinθ, θ′ = (l/m)v − g cosθ / v, h′ = v sinθ, x′ = v cosθ (g = 9.81)</div>
 </div>
-
+ 
 <div class="card">
 <canvas id="cv2" height="180"></canvas>
 <div class="leg" style="margin-top:6px"><span><i style="background:var(--ac)"></i>속도 v (m/s)</span><span><i style="background:var(--ac2)"></i>활공각 θ (°)</span></div>
 </div>
+<div class="card">
+<canvas id="cv3" height="240"></canvas>
+<div class="note">현재 속도·높이·계수 기준으로 −60°~60°를 0.25° 간격으로 계산한 그래프예요. 그래프를 누르면 그 각도로 날려봐요. (속도, 높이, l/m, d/m를 바꾸면 다시 계산돼요)</div>
+</div>
 </main>
-
+ 
 <script>
 const $=id=>document.getElementById(id), G=9.81;
 const P={v:5,a:16.5,h:1.8,l:0.2,d:0.025,t:0.001};
 const fmt={v:x=>x.toFixed(1),a:x=>x.toFixed(1)+'°',h:x=>x.toFixed(1),l:x=>x.toFixed(3),d:x=>x.toFixed(4),t:x=>x.toFixed(4)};
 let path=[],res=null,anim=null,prog=1;
-
-function sim(v0,deg,h0,l,d,dt,keep){
+ 
+const TMAX=40;
+function sim(v0,deg,h0,l,d,dt,keep,tmax){
   let v=v0,th=deg*Math.PI/180,h=h0,x=0,t=0,hm=h0,pts=keep?[[0,h0,t,v,th]]:null;
-  for(let i=0;i<4e6;i++){
+  const N=Math.ceil((tmax||TMAX)/dt),every=Math.max(1,Math.round(0.01/dt));
+  for(let i=0;i<N;i++){
     const vn=v+(-d*v*v-G*Math.sin(th))*dt;
     const tn=th+(l*v-G*Math.cos(th)/v)*dt;
     const hn=h+v*Math.sin(th)*dt;
@@ -96,38 +102,43 @@ function sim(v0,deg,h0,l,d,dt,keep){
       if(keep)pts.push([X,0,t-dt+dt*f,v+(vn-v)*f,th+(tn-th)*f]);
       return{range:X,time:t-dt+dt*f,hmax:hm,pts,ok:true}}
     v=vn;th=tn;h=hn;x=xn;if(h>hm)hm=h;
-    if(keep&&i%Math.max(1,Math.round(0.01/dt))===0)pts.push([x,h,t,v,th]);
+    if(keep&&i%every===0)pts.push([x,h,t,v,th]);
     if(!(v>0.05)||!isFinite(th)||x>200)return{range:x,time:t,hmax:hm,pts,ok:false}
   }
   return{range:x,time:t,hmax:hm,pts,ok:false}
 }
-
+ 
 function run(){
-  res=sim(P.v,P.a,P.h,P.l,P.d,P.t,true);path=res.pts;
-  $('rng').textContent=res.ok?res.range.toFixed(3)+' m':'착지 못함';
-  $('tm').textContent=res.time.toFixed(2)+' s';
-  $('hmax').textContent=res.hmax.toFixed(2)+' m';
-  $('msg').textContent=res.ok?'':'속도가 거의 0이 되었거나 계산이 발산했어요. 조건을 바꿔보세요.';
-  draw();drawPlot();
+  try{
+    res=sim(P.v,P.a,P.h,P.l,P.d,P.t,true);path=res.pts;
+    $('rng').textContent=res.ok?res.range.toFixed(3)+' m':'착지 못함';
+    $('tm').textContent=res.time.toFixed(2)+' s';
+    $('hmax').textContent=res.hmax.toFixed(2)+' m';
+    $('msg').textContent=res.ok?'':'착지하기 전에 계산이 끝났어요(속도가 거의 0이 되었거나 계속 날고 있어요). 조건을 바꿔보세요.';
+    drawPlot();calcRange();drawRange();play();
+  }catch(e){$('msg').textContent='오류: '+e.message}
 }
-
-function setup(c){const r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
-  c.width=r.width*dpr;const hh=+c.getAttribute('height');c.height=hh*dpr;
-  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);return{g,w:r.width,h:hh}}
+ 
+function setup(c){const r=c.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);
+  if(!c.dataset.h)c.dataset.h=c.getAttribute('height');
+  const hh=+c.dataset.h,W=Math.max(1,Math.round(r.width*dpr)),Hh=Math.round(hh*dpr);
+  if(c.width!==W)c.width=W;
+  if(c.height!==Hh)c.height=Hh;
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,r.width,hh);return{g,w:r.width,h:hh}}
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-
+ 
 function draw(){
   const{g,w,h}=setup($('cv'));g.clearRect(0,0,w,h);
   if(!path.length)return;
-  const pad=34,xs=path.map(p=>p[0]),hs=path.map(p=>p[1]);
-  const X=Math.max(1,...xs)*1.05,H=Math.max(1,...hs)*1.25;
+  const pad=34;let X=1,H=1;
+  path.forEach(p=>{if(p[0]>X)X=p[0];if(p[1]>H)H=p[1]});X*=1.05;H*=1.25;
   const sc=Math.min((w-pad*2)/X,(h-pad*1.6)/H);
   const ox=pad,oy=h-pad;
   const px=x=>ox+x*sc,py=y=>oy-y*sc;
   g.strokeStyle=css('--bd');g.fillStyle=css('--mu');g.font='11px sans-serif';g.lineWidth=1;
   g.beginPath();g.moveTo(ox,oy);g.lineTo(w-pad/2,oy);g.moveTo(ox,oy);g.lineTo(ox,pad/2);g.stroke();
-  const step=X>12?2:X>5?1:0.5;
-  for(let m=0;m<=X;m+=step){g.fillText(m+'m',px(m)-8,oy+14);g.beginPath();g.moveTo(px(m),oy);g.lineTo(px(m),oy+4);g.stroke()}
+  const step=X>100?20:X>40?10:X>12?2:X>5?1:0.5;
+  for(let m=0;m<=X&&m<1000;m+=step){g.fillText(m+'m',px(m)-8,oy+14);g.beginPath();g.moveTo(px(m),oy);g.lineTo(px(m),oy+4);g.stroke()}
   g.fillText('고도 (m)',ox+4,pad/2+8);
   const n=Math.max(1,Math.floor((path.length-1)*prog));
   g.strokeStyle=css('--ac');g.lineWidth=2;g.beginPath();
@@ -139,13 +150,14 @@ function draw(){
   if(prog>=1&&res.ok){g.fillStyle=css('--ok');g.beginPath();g.arc(px(res.range),oy,4,0,7);g.fill();
     g.fillText(res.range.toFixed(2)+' m',Math.min(px(res.range)-16,w-60),oy-10)}
 }
-
+ 
 function drawPlot(){
   const{g,w,h}=setup($('cv2'));g.clearRect(0,0,w,h);
   if(path.length<2)return;
   const pl=38,pr=38,pt=10,pb=22,T=res.time;
   const vs=path.map(p=>p[3]),ths=path.map(p=>p[4]*180/Math.PI);
-  const vmin=Math.min(...vs),vmax=Math.max(...vs),amin=Math.min(...ths),amax=Math.max(...ths);
+  const mn=a=>a.reduce((s,x)=>x<s?x:s,Infinity),mx=a=>a.reduce((s,x)=>x>s?x:s,-Infinity);
+  const vmin=mn(vs),vmax=mx(vs),amin=mn(ths),amax=mx(ths);
   const sx=t=>pl+t/T*(w-pl-pr);
   const sy=(y,a,b)=>h-pb-(y-a)/((b-a)||1)*(h-pb-pt);
   g.strokeStyle=css('--bd');g.fillStyle=css('--mu');g.font='11px sans-serif';
@@ -158,12 +170,46 @@ function drawPlot(){
     g.strokeStyle=css(c);g.lineWidth=2;g.beginPath();
     path.forEach((p,i)=>{const X=sx(p[2]),Y=sy(a[i],lo,hi);i?g.lineTo(X,Y):g.moveTo(X,Y)});g.stroke()})
 }
-
+ 
+let rk='',rd=[];
+function calcRange(){
+  const k=[P.v,P.h,P.l,P.d].join();
+  if(k===rk)return;rk=k;rd=[];
+  for(let a=-60;a<=60.0001;a+=0.25){
+    const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,15);
+    rd.push([a,r.ok?r.range:null]);
+  }
+}
+function drawRange(){
+  const{g,w,h}=setup($('cv3'));
+  const pl=44,pr=14,pt=22,pb=28;
+  let mx=0,best=null;
+  rd.forEach(p=>{if(p[1]!==null&&p[1]>mx){mx=p[1];best=p}});
+  const top=Math.max(1,mx)*1.1;
+  const sx=a=>pl+(a+60)/120*(w-pl-pr),sy=r=>h-pb-r/top*(h-pb-pt);
+  g.strokeStyle=css('--bd');g.fillStyle=css('--mu');g.font='11px sans-serif';g.lineWidth=1;
+  g.strokeRect(pl,pt,w-pl-pr,h-pt-pb);
+  for(let a=-60;a<=60;a+=20){g.fillText(a+'°',sx(a)-10,h-pb+14);g.beginPath();g.moveTo(sx(a),h-pb);g.lineTo(sx(a),h-pb+4);g.stroke()}
+  for(let i=0;i<=4;i++){const r=top*i/4,y=sy(r);g.fillText(r.toFixed(1),4,y+4);if(i){g.setLineDash([2,3]);g.beginPath();g.moveTo(pl,y);g.lineTo(w-pr,y);g.stroke();g.setLineDash([])}}
+  g.fillStyle=css('--tx');g.fillText('속도 '+P.v.toFixed(1)+' m/s · 발사각별 비거리 (m)',pl,13);
+  g.strokeStyle=css('--ac');g.lineWidth=2;g.beginPath();
+  let pen=false;
+  rd.forEach(p=>{if(p[1]===null){pen=false;return}const X=sx(p[0]),Y=sy(p[1]);pen?g.lineTo(X,Y):g.moveTo(X,Y);pen=true});
+  g.stroke();
+  g.setLineDash([4,3]);g.strokeStyle=css('--ac2');g.lineWidth=1;g.beginPath();g.moveTo(sx(P.a),pt);g.lineTo(sx(P.a),h-pb);g.stroke();g.setLineDash([]);
+  if(best){g.fillStyle=css('--ok');g.beginPath();g.arc(sx(best[0]),sy(best[1]),4,0,7);g.fill();
+    const lx=Math.min(sx(best[0])+8,w-150);g.fillText('최대 '+best[1].toFixed(2)+' m @ '+best[0].toFixed(2)+'°',lx,Math.max(sy(best[1])+14,pt+12))}
+}
+$('cv3').addEventListener('click',e=>{
+  const r=e.currentTarget.getBoundingClientRect(),x=e.clientX-r.left;
+  const a=Math.round(((x-44)/(r.width-44-14)*120-60)*10)/10;
+  if(a>=-60&&a<=60)setAll({a});
+});
 function play(){
   cancelAnimationFrame(anim);prog=0;const t0=performance.now(),dur=Math.max(1200,Math.min(5000,res.time*1000));
   (function f(now){prog=Math.min(1,(now-t0)/dur);draw();if(prog<1)anim=requestAnimationFrame(f)})(t0);
 }
-
+ 
 ['v','a','h','l','d','t'].forEach(k=>{
   const el=$(k),lab=$(k+'V');
   const upd=()=>{P[k]=+el.value;lab.textContent=fmt[k](P[k])};
@@ -179,17 +225,17 @@ $('scan').onclick=()=>{
   $('msg').textContent='찾는 중…';
   setTimeout(()=>{
     let best=-1e9,ba=0;
-    for(let a=-60;a<=60;a+=0.1){const r=sim(P.v,a,P.h,P.l,P.d,Math.max(P.t,0.002),false);
+    for(let a=-60;a<=60;a+=0.1){const r=sim(P.v,a,P.h,P.l,P.d,Math.max(P.t,0.005),false,15);
       if(r.ok&&r.range>best){best=r.range;ba=a}}
     let b2=-1e9,a2=ba;
-    for(let a=ba-0.1;a<=ba+0.1001;a+=0.01){const r=sim(P.v,a,P.h,P.l,P.d,P.t,false);if(r.ok&&r.range>b2){b2=r.range;a2=a}}
+    for(let a=ba-0.1;a<=ba+0.1001;a+=0.01){const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,15);if(r.ok&&r.range>b2){b2=r.range;a2=a}}
     a2=Math.round(a2*100)/100;
     setAll({a:Math.round(a2*10)/10});
     $('msg').textContent='최적 발사각 ≈ '+a2.toFixed(2)+'° (비거리 '+b2.toFixed(3)+' m). 슬라이더는 0.1° 단위라 가장 가까운 값으로 맞췄어요.';
     play();
   },20);
 };
-window.addEventListener('resize',()=>{draw();drawPlot()});
+window.addEventListener('resize',()=>{draw();drawPlot();drawRange()});
 run();
 </script>
 </body>
