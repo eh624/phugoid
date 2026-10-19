@@ -16,7 +16,7 @@ main{max-width:860px;margin:0 auto;padding:16px}
 h1{font-size:20px;margin:0 0 2px}
 .sub{color:var(--mu);font-size:13px;margin:0 0 14px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
-canvas{width:100%;display:block;border-radius:8px}#cv{height:300px}#cv2{height:180px}#cv3{height:240px}#cv3{cursor:crosshair}
+canvas{width:100%;display:block;border-radius:8px}#cv{height:300px}#cv2{height:180px}#cv3,#cv4{height:240px;cursor:crosshair}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px}
 label{display:block;font-size:13px;color:var(--mu)}
 label b{color:var(--tx);float:right;font-variant-numeric:tabular-nums}
@@ -78,7 +78,8 @@ button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
 </div>
 <div class="card">
 <canvas id="cv3" height="240"></canvas>
-<div class="note">현재 속도·높이·계수 기준으로 −60°~60°를 0.25° 간격으로 계산한 그래프예요. 그래프를 누르면 그 각도로 날려봐요. (속도, 높이, l/m, d/m를 바꾸면 다시 계산돼요)</div>
+<canvas id="cv4" height="240" style="margin-top:10px"></canvas>
+<div class="note">현재 속도·높이·계수 기준으로 −60°~60°를 0.25° 간격으로 계산한 그래프예요(위: 비거리, 아래: 체공시간). 그래프를 누르면 그 각도로 날려봐요. (속도, 높이, l/m, d/m를 바꾸면 다시 계산돼요)</div>
 </div>
 </main>
  
@@ -177,34 +178,35 @@ function calcRange(){
   if(k===rk)return;rk=k;rd=[];
   for(let a=-60;a<=60.0001;a+=0.25){
     const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,15);
-    rd.push([a,r.ok?r.range:null]);
+    rd.push([a,r.ok?r.range:null,r.ok?r.time:null]);
   }
 }
-function drawRange(){
-  const{g,w,h}=setup($('cv3'));
+function drawRange(){drawAG('cv3',1,'발사각별 비거리 (m)','m');drawAG('cv4',2,'발사각별 체공시간 (s)','s')}
+function drawAG(id,k,title,u){
+  const{g,w,h}=setup($(id));
   const pl=44,pr=14,pt=22,pb=28;
   let mx=0,best=null;
-  rd.forEach(p=>{if(p[1]!==null&&p[1]>mx){mx=p[1];best=p}});
+  rd.forEach(p=>{if(p[k]!==null&&p[k]>mx){mx=p[k];best=p}});
   const top=Math.max(1,mx)*1.1;
   const sx=a=>pl+(a+60)/120*(w-pl-pr),sy=r=>h-pb-r/top*(h-pb-pt);
   g.strokeStyle=css('--bd');g.fillStyle=css('--mu');g.font='11px sans-serif';g.lineWidth=1;
   g.strokeRect(pl,pt,w-pl-pr,h-pt-pb);
   for(let a=-60;a<=60;a+=20){g.fillText(a+'°',sx(a)-10,h-pb+14);g.beginPath();g.moveTo(sx(a),h-pb);g.lineTo(sx(a),h-pb+4);g.stroke()}
   for(let i=0;i<=4;i++){const r=top*i/4,y=sy(r);g.fillText(r.toFixed(1),4,y+4);if(i){g.setLineDash([2,3]);g.beginPath();g.moveTo(pl,y);g.lineTo(w-pr,y);g.stroke();g.setLineDash([])}}
-  g.fillStyle=css('--tx');g.fillText('속도 '+P.v.toFixed(1)+' m/s · 발사각별 비거리 (m)',pl,13);
+  g.fillStyle=css('--tx');g.fillText('속도 '+P.v.toFixed(1)+' m/s · '+title,pl,13);
   g.strokeStyle=css('--ac');g.lineWidth=2;g.beginPath();
   let pen=false;
-  rd.forEach(p=>{if(p[1]===null){pen=false;return}const X=sx(p[0]),Y=sy(p[1]);pen?g.lineTo(X,Y):g.moveTo(X,Y);pen=true});
+  rd.forEach(p=>{if(p[k]===null){pen=false;return}const X=sx(p[0]),Y=sy(p[k]);pen?g.lineTo(X,Y):g.moveTo(X,Y);pen=true});
   g.stroke();
   g.setLineDash([4,3]);g.strokeStyle=css('--ac2');g.lineWidth=1;g.beginPath();g.moveTo(sx(P.a),pt);g.lineTo(sx(P.a),h-pb);g.stroke();g.setLineDash([]);
-  if(best){g.fillStyle=css('--ok');g.beginPath();g.arc(sx(best[0]),sy(best[1]),4,0,7);g.fill();
-    const lx=Math.min(sx(best[0])+8,w-150);g.fillText('최대 '+best[1].toFixed(2)+' m @ '+best[0].toFixed(2)+'°',lx,Math.max(sy(best[1])+14,pt+12))}
+  if(best){g.fillStyle=css('--ok');g.beginPath();g.arc(sx(best[0]),sy(best[k]),4,0,7);g.fill();
+    const lx=Math.min(sx(best[0])+8,w-150);g.fillText('최대 '+best[k].toFixed(2)+' '+u+' @ '+best[0].toFixed(2)+'°',lx,Math.max(sy(best[k])+14,pt+12))}
 }
-$('cv3').addEventListener('click',e=>{
+['cv3','cv4'].forEach(id=>$(id).addEventListener('click',e=>{
   const r=e.currentTarget.getBoundingClientRect(),x=e.clientX-r.left;
   const a=Math.round(((x-44)/(r.width-44-14)*120-60)*10)/10;
   if(a>=-60&&a<=60)setAll({a});
-});
+}));
 function play(){
   cancelAnimationFrame(anim);prog=0;const t0=performance.now(),dur=Math.max(1200,Math.min(5000,res.time*1000));
   (function f(now){prog=Math.min(1,(now-t0)/dur);draw();if(prog<1)anim=requestAnimationFrame(f)})(t0);
