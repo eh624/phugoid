@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>푸고이드 시뮬레이터</title>
+<style>
+:root{--bg:#f7f7f4;--card:#fff;--tx:#1d1d1b;--mu:#6b6b66;--bd:#dcdcd5;--ac:#2a6fdb;--ac2:#e0713a;--ok:#2e8b57;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161615;--card:#212120;--tx:#ecece8;--mu:#a0a09a;--bd:#3a3a37;--ac:#6aa3ff;--ac2:#ff9a66;--ok:#5ccf93}}
+:root[data-theme="dark"]{--bg:#161615;--card:#212120;--tx:#ecece8;--mu:#a0a09a;--bd:#3a3a37;--ac:#6aa3ff;--ac2:#ff9a66;--ok:#5ccf93}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 -apple-system,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
+main{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--mu);font-size:13px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+canvas{width:100%;display:block;border-radius:8px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 18px}
+label{display:block;font-size:13px;color:var(--mu)}
+label b{color:var(--tx);float:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--ac)}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+button{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:8px;padding:7px 12px;font:inherit;cursor:pointer}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+.res{display:flex;flex-wrap:wrap;gap:20px}
+.res div{font-size:12px;color:var(--mu)}
+.res strong{display:block;font-size:22px;color:var(--tx);font-variant-numeric:tabular-nums}
+.note{font-size:12px;color:var(--mu);margin-top:8px}
+.leg span{display:inline-block;margin-right:12px;font-size:12px;color:var(--mu)}
+.leg i{display:inline-block;width:10px;height:3px;margin-right:4px;vertical-align:middle}
+</style>
+</head>
+<body>
+<main>
+<h1>푸고이드 시뮬레이터</h1>
+<p class="sub">종이비행기 · 오일러 방법(엑셀 수행평가와 동일한 식) · 지면 충돌 직전·직후 선형 보간</p>
+
+<div class="card">
+<canvas id="cv" height="300"></canvas>
+<div class="row">
+<button class="p" id="play">▶ 날려보기</button>
+<button id="s5">5 m/s · 16.5°</button>
+<button id="s6">6 m/s · 8.9°</button>
+<button id="s7">7 m/s · −20.4°</button>
+</div>
+</div>
+
+<div class="card">
+<div class="res">
+<div>비거리<strong id="rng">–</strong></div>
+<div>비행 시간<strong id="tm">–</strong></div>
+<div>최고 고도<strong id="hmax">–</strong></div>
+</div>
+<div class="note" id="msg"></div>
+</div>
+
+<div class="card">
+<div class="grid">
+<label>초기 속도 v₀ (m/s)<b id="vV"></b><input id="v" type="range" min="2" max="12" step="0.1" value="5"></label>
+<label>발사각 θ₀ (°)<b id="aV"></b><input id="a" type="range" min="-60" max="60" step="0.1" value="16.5"></label>
+<label>발사 높이 h₀ (m)<b id="hV"></b><input id="h" type="range" min="0.5" max="3" step="0.1" value="1.8"></label>
+<label>l/m 양력 계수 (m⁻¹)<b id="lV"></b><input id="l" type="range" min="0" max="0.5" step="0.005" value="0.2"></label>
+<label>d/m 항력 계수 (m⁻¹)<b id="dV"></b><input id="d" type="range" min="0" max="0.1" step="0.0005" value="0.025"></label>
+<label>시간 간격 Δt (s)<b id="tV"></b><input id="t" type="range" min="0.0005" max="0.02" step="0.0005" value="0.001"></label>
+</div>
+<div class="row">
+<button id="scan">이 조건에서 최적 발사각 찾기</button>
+<button id="reset">초기화</button>
+</div>
+<div class="note">식: v′ = −(d/m)v² − g sinθ, θ′ = (l/m)v − g cosθ / v, h′ = v sinθ, x′ = v cosθ (g = 9.81)</div>
+</div>
+
+<div class="card">
+<canvas id="cv2" height="180"></canvas>
+<div class="leg" style="margin-top:6px"><span><i style="background:var(--ac)"></i>속도 v (m/s)</span><span><i style="background:var(--ac2)"></i>활공각 θ (°)</span></div>
+</div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id), G=9.81;
+const P={v:5,a:16.5,h:1.8,l:0.2,d:0.025,t:0.001};
+const fmt={v:x=>x.toFixed(1),a:x=>x.toFixed(1)+'°',h:x=>x.toFixed(1),l:x=>x.toFixed(3),d:x=>x.toFixed(4),t:x=>x.toFixed(4)};
+let path=[],res=null,anim=null,prog=1;
+
+function sim(v0,deg,h0,l,d,dt,keep){
+  let v=v0,th=deg*Math.PI/180,h=h0,x=0,t=0,hm=h0,pts=keep?[[0,h0,t,v,th]]:null;
+  for(let i=0;i<4e6;i++){
+    const vn=v+(-d*v*v-G*Math.sin(th))*dt;
+    const tn=th+(l*v-G*Math.cos(th)/v)*dt;
+    const hn=h+v*Math.sin(th)*dt;
+    const xn=x+v*Math.cos(th)*dt;
+    t+=dt;
+    if(hn<0){const f=h/(h-hn);const X=x+(xn-x)*f;
+      if(keep)pts.push([X,0,t-dt+dt*f,v+(vn-v)*f,th+(tn-th)*f]);
+      return{range:X,time:t-dt+dt*f,hmax:hm,pts,ok:true}}
+    v=vn;th=tn;h=hn;x=xn;if(h>hm)hm=h;
+    if(keep&&i%Math.max(1,Math.round(0.01/dt))===0)pts.push([x,h,t,v,th]);
+    if(!(v>0.05)||!isFinite(th)||x>200)return{range:x,time:t,hmax:hm,pts,ok:false}
+  }
+  return{range:x,time:t,hmax:hm,pts,ok:false}
+}
+
+function run(){
+  res=sim(P.v,P.a,P.h,P.l,P.d,P.t,true);path=res.pts;
+  $('rng').textContent=res.ok?res.range.toFixed(3)+' m':'착지 못함';
+  $('tm').textContent=res.time.toFixed(2)+' s';
+  $('hmax').textContent=res.hmax.toFixed(2)+' m';
+  $('msg').textContent=res.ok?'':'속도가 거의 0이 되었거나 계산이 발산했어요. 조건을 바꿔보세요.';
+  draw();drawPlot();
+}
+
+function setup(c){const r=c.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  c.width=r.width*dpr;const hh=+c.getAttribute('height');c.height=hh*dpr;
+  const g=c.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);return{g,w:r.width,h:hh}}
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function draw(){
+  const{g,w,h}=setup($('cv'));g.clearRect(0,0,w,h);
+  if(!path.length)return;
+  const pad=34,xs=path.map(p=>p[0]),hs=path.map(p=>p[1]);
+  const X=Math.max(1,...xs)*1.05,H=Math.max(1,...hs)*1.25;
+  const sc=Math.min((w-pad*2)/X,(h-pad*1.6)/H);
+  const ox=pad,oy=h-pad;
+  const px=x=>ox+x*sc,py=y=>oy-y*sc;
+  g.strokeStyle=css('--bd');g.fillStyle=css('--mu');g.font='11px sans-serif';g.lineWidth=1;
+  g.beginPath();g.moveTo(ox,oy);g.lineTo(w-pad/2,oy);g.moveTo(ox,oy);g.lineTo(ox,pad/2);g.stroke();
+  const step=X>12?2:X>5?1:0.5;
+  for(let m=0;m<=X;m+=step){g.fillText(m+'m',px(m)-8,oy+14);g.beginPath();g.moveTo(px(m),oy);g.lineTo(px(m),oy+4);g.stroke()}
+  g.fillText('고도 (m)',ox+4,pad/2+8);
+  const n=Math.max(1,Math.floor((path.length-1)*prog));
+  g.strokeStyle=css('--ac');g.lineWidth=2;g.beginPath();
+  for(let i=0;i<=n;i++){const p=path[i];i?g.lineTo(px(p[0]),py(p[1])):g.moveTo(px(p[0]),py(p[1]))}
+  g.stroke();
+  const p=path[n];
+  g.save();g.translate(px(p[0]),py(p[1]));g.rotate(-p[4]);
+  g.fillStyle=css('--ac2');g.beginPath();g.moveTo(14,0);g.lineTo(-9,-6);g.lineTo(-5,0);g.lineTo(-9,6);g.closePath();g.fill();g.restore();
+  if(prog>=1&&res.ok){g.fillStyle=css('--ok');g.beginPath();g.arc(px(res.range),oy,4,0,7);g.fill();
+    g.fillText(res.range.toFixed(2)+' m',Math.min(px(res.range)-16,w-60),oy-10)}
+}
+
+function drawPlot(){
+  const{g,w,h}=setup($('cv2'));g.clearRect(0,0,w,h);
+  if(path.length<2)return;
+  const pl=38,pr=38,pt=10,pb=22,T=res.time;
+  const vs=path.map(p=>p[3]),ths=path.map(p=>p[4]*180/Math.PI);
+  const vmin=Math.min(...vs),vmax=Math.max(...vs),amin=Math.min(...ths),amax=Math.max(...ths);
+  const sx=t=>pl+t/T*(w-pl-pr);
+  const sy=(y,a,b)=>h-pb-(y-a)/((b-a)||1)*(h-pb-pt);
+  g.strokeStyle=css('--bd');g.fillStyle=css('--mu');g.font='11px sans-serif';
+  g.strokeRect(pl,pt,w-pl-pr,h-pt-pb);
+  g.fillText('0',pl-3,h-6);g.fillText(T.toFixed(1)+'s',w-pr-14,h-6);
+  g.fillText(vmax.toFixed(1),4,pt+8);g.fillText(vmin.toFixed(1),4,h-pb);
+  g.fillText(amax.toFixed(0)+'°',w-pr+3,pt+8);g.fillText(amin.toFixed(0)+'°',w-pr+3,h-pb);
+  if(amin<0&&amax>0){const y=sy(0,amin,amax);g.setLineDash([3,3]);g.beginPath();g.moveTo(pl,y);g.lineTo(w-pr,y);g.stroke();g.setLineDash([])}
+  [[vs,vmin,vmax,'--ac'],[ths,amin,amax,'--ac2']].forEach(([a,lo,hi,c])=>{
+    g.strokeStyle=css(c);g.lineWidth=2;g.beginPath();
+    path.forEach((p,i)=>{const X=sx(p[2]),Y=sy(a[i],lo,hi);i?g.lineTo(X,Y):g.moveTo(X,Y)});g.stroke()})
+}
+
+function play(){
+  cancelAnimationFrame(anim);prog=0;const t0=performance.now(),dur=Math.max(1200,Math.min(5000,res.time*1000));
+  (function f(now){prog=Math.min(1,(now-t0)/dur);draw();if(prog<1)anim=requestAnimationFrame(f)})(t0);
+}
+
+['v','a','h','l','d','t'].forEach(k=>{
+  const el=$(k),lab=$(k+'V');
+  const upd=()=>{P[k]=+el.value;lab.textContent=fmt[k](P[k])};
+  el.addEventListener('input',()=>{upd();cancelAnimationFrame(anim);prog=1;run()});upd();
+});
+function setAll(o){Object.assign(P,o);for(const k in o){$(k).value=o[k];$(k+'V').textContent=fmt[k](o[k])}cancelAnimationFrame(anim);prog=1;run()}
+$('play').onclick=play;
+$('s5').onclick=()=>{setAll({v:5,a:16.5});play()};
+$('s6').onclick=()=>{setAll({v:6,a:8.9});play()};
+$('s7').onclick=()=>{setAll({v:7,a:-20.4});play()};
+$('reset').onclick=()=>setAll({v:5,a:16.5,h:1.8,l:0.2,d:0.025,t:0.001});
+$('scan').onclick=()=>{
+  $('msg').textContent='찾는 중…';
+  setTimeout(()=>{
+    let best=-1e9,ba=0;
+    for(let a=-60;a<=60;a+=0.1){const r=sim(P.v,a,P.h,P.l,P.d,Math.max(P.t,0.002),false);
+      if(r.ok&&r.range>best){best=r.range;ba=a}}
+    let b2=-1e9,a2=ba;
+    for(let a=ba-0.1;a<=ba+0.1001;a+=0.01){const r=sim(P.v,a,P.h,P.l,P.d,P.t,false);if(r.ok&&r.range>b2){b2=r.range;a2=a}}
+    a2=Math.round(a2*100)/100;
+    setAll({a:Math.round(a2*10)/10});
+    $('msg').textContent='최적 발사각 ≈ '+a2.toFixed(2)+'° (비거리 '+b2.toFixed(3)+' m). 슬라이더는 0.1° 단위라 가장 가까운 값으로 맞췄어요.';
+    play();
+  },20);
+};
+window.addEventListener('resize',()=>{draw();drawPlot()});
+run();
+</script>
+</body>
+</html>
