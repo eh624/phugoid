@@ -190,10 +190,10 @@ function drawPlot(){
  
 let rk='',rd=[];
 function calcRange(){
-  const k=[P.v,P.h,P.l,P.d].join();
+  const k=[P.v,P.h,P.l,P.d,P.t].join();
   if(k===rk)return;rk=k;rd=[];
   for(let a=-60;a<=60.0001;a+=0.25){
-    const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,25);
+    const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,TMAX);
     rd.push([a,r.ok?r.range:null,r.ok?r.time:null]);
   }
 }
@@ -240,10 +240,10 @@ $('scan').onclick=()=>{
   setMsg('finding');
   setTimeout(()=>{
     let best=-1e9,ba=0;
-    for(let a=-60;a<=60;a+=0.1){const r=sim(P.v,a,P.h,P.l,P.d,Math.max(P.t,0.005),false,25);
+    for(let a=-60;a<=60;a+=0.1){const r=sim(P.v,a,P.h,P.l,P.d,Math.max(P.t,0.005),false,TMAX);
       if(r.ok&&r.range>best){best=r.range;ba=a}}
     let b2=-1e9,a2=ba;
-    for(let a=ba-0.1;a<=ba+0.1001;a+=0.01){const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,25);if(r.ok&&r.range>b2){b2=r.range;a2=a}}
+    for(let a=ba-0.1;a<=ba+0.1001;a+=0.01){const r=sim(P.v,a,P.h,P.l,P.d,P.t,false,TMAX);if(r.ok&&r.range>b2){b2=r.range;a2=a}}
     a2=Math.round(a2*100)/100;
     setAll({a:Math.round(a2*10)/10});
     setMsg('best',a2.toFixed(2),b2.toFixed(3));
